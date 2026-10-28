@@ -363,6 +363,45 @@ html.menu-open,html.menu-open body{overflow:hidden}
 @media (max-width:600px){.lb-prev,.lb-next{top:auto;bottom:18px;transform:none}.lb-prev:hover,.lb-next:hover{transform:none}.lb-prev{left:calc(50% - 58px)}.lb-next{right:calc(50% - 58px)}.lb-figure figcaption{padding-bottom:60px}}
 html.lb-open,html.lb-open body{overflow:hidden}
 
+/* Footer contact hover effects */
+.footer-contact li {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Address and working hours */
+.footer-contact li span[data-setting="address"],
+.footer-contact li span[data-setting="hours"] {
+  display: inline-block;
+  cursor: default;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Hover effect for all contact text */
+.footer-contact li:hover span[data-setting="address"],
+.footer-contact li:hover span[data-setting="hours"] {
+  color: var(--accent, #75b843);
+  transform: translateX(5px);
+}
+
+/* Hover effect for phone and email */
+.footer-contact li a {
+  transition: color 0.3s ease;
+}
+
+.footer-contact li:hover a {
+  color: var(--accent, var(--rose));
+}
+
+/* Hover effect for contact icons */
+.footer-contact li svg {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.footer-contact li:hover svg {
+  color: var(--accent, var(--rose));
+  transform: scale(1.12);
+}
+
 </style>
 </head>
 <body class=" has-header">

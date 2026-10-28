@@ -349,6 +349,45 @@ html.menu-open,html.menu-open body{overflow:hidden}
 .packages .package .checklist{margin:0 0 22px;flex:1}
 .packages .package.featured{border:2px solid var(--rose);box-shadow:var(--shadow);background:linear-gradient(180deg,#fff,var(--blush))}
 
+/* Footer contact hover effects */
+.footer-contact li {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Address and working hours */
+.footer-contact li span[data-setting="address"],
+.footer-contact li span[data-setting="hours"] {
+  display: inline-block;
+  cursor: default;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Hover effect for all contact text */
+.footer-contact li:hover span[data-setting="address"],
+.footer-contact li:hover span[data-setting="hours"] {
+  color: var(--accent, #75b843);
+  transform: translateX(5px);
+}
+
+/* Hover effect for phone and email */
+.footer-contact li a {
+  transition: color 0.3s ease;
+}
+
+.footer-contact li:hover a {
+  color: var(--accent, var(--rose));
+}
+
+/* Hover effect for contact icons */
+.footer-contact li svg {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.footer-contact li:hover svg {
+  color: var(--accent, var(--rose));
+  transform: scale(1.12);
+}
+
 </style>
 </head>
 <body class=" has-header">

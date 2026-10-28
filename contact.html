@@ -20,8 +20,8 @@
   --header-h:76px;--ease:cubic-bezier(.22,.8,.3,1);
 }
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:calc(var(--header-h) + 12px)}
-body.has-header{padding-top:var(--header-h)}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:calc(var(--header-h) + 12px);overflow-x:hidden}
+body.has-header{padding-top:var(--header-h);overflow-x:hidden}
 body{margin:0;font-family:var(--sans);font-size:16px;line-height:1.65;color:var(--char);background:var(--ivory);animation:pageIn .6s var(--ease) both}
 @keyframes pageIn{from{opacity:0}to{opacity:1}}
 img,svg,video,iframe{max-width:100%}
@@ -363,6 +363,64 @@ html.menu-open,html.menu-open body{overflow:hidden}
 .faq-q[aria-expanded="true"] .i{transform:rotate(45deg)}
 .faq-a{padding:0 20px 18px;color:var(--muted)}.faq-a p{margin:0}
 .legal h2{font-size:1.8rem}
+
+/* custom dropdown (replaces native select popup so it never overflows the screen) */
+.dd{position:relative;min-width:0}
+.dd-native{position:absolute;left:0;top:0;width:1px;height:1px;min-height:0;padding:0;border:0;opacity:0;pointer-events:none;overflow:hidden}
+.dd-btn{width:100%;min-height:48px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1.5px solid rgba(37,33,39,.2);border-radius:var(--r);cursor:pointer;text-align:left;font:inherit;color:var(--char);transition:border-color .25s,box-shadow .25s,background .25s}
+.dd-btn:hover{border-color:var(--mauve)}
+.dd-btn:focus-visible,.dd-btn[aria-expanded="true"]{outline:none;border-color:var(--rose);box-shadow:0 0 0 4px rgba(198,83,112,.18)}
+.dd-btn .i{width:18px;height:18px;transition:transform .25s var(--ease)}
+.dd-btn[aria-expanded="true"] .i{transform:rotate(180deg)}
+.dd-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-btn.is-placeholder .dd-label{color:var(--muted)}
+.dd-native[aria-invalid="true"]+.dd-btn{border-color:#B3263E;background:#FFF5F6}
+.dd-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:90;margin:0;padding:6px;list-style:none;max-height:min(320px,55vh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-lg)}
+.dd-list[hidden]{display:none}
+.dd.up .dd-list{top:auto;bottom:calc(100% + 6px)}
+.dd-group{padding:10px 10px 4px;font-family:var(--serif);font-weight:700;font-size:1.05rem;color:var(--deep)}
+.dd-opt{padding:10px 12px 10px 18px;border-radius:4px;cursor:pointer;line-height:1.4;font-size:.95rem;white-space:normal;overflow-wrap:anywhere}
+.dd-opt:hover,.dd-opt.is-active{background:var(--blush)}
+.dd-opt.is-selected{font-weight:700;color:var(--deep)}
+
+/* Footer contact hover effects */
+.footer-contact li {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Address and working hours */
+.footer-contact li span[data-setting="address"],
+.footer-contact li span[data-setting="hours"] {
+  display: inline-block;
+  cursor: default;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Hover effect for all contact text */
+.footer-contact li:hover span[data-setting="address"],
+.footer-contact li:hover span[data-setting="hours"] {
+  color: var(--accent, #75b843);
+  transform: translateX(5px);
+}
+
+/* Hover effect for phone and email */
+.footer-contact li a {
+  transition: color 0.3s ease;
+}
+
+.footer-contact li:hover a {
+  color: var(--accent, var(--rose));
+}
+
+/* Hover effect for contact icons */
+.footer-contact li svg {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.footer-contact li:hover svg {
+  color: var(--accent, var(--rose));
+  transform: scale(1.12);
+}
 
 </style>
 </head>
@@ -1043,6 +1101,174 @@ const SALON_MAP_QUERY = '';
   if (q) { renderMap(q); if (!SALON_MAP_QUERY) addReset(); } else { renderPlaceholder(); }
 })();
 
+</script>
+<script>
+/* Custom dropdowns: every <select class="select"> keeps working (value, change event,
+   validation, form.reset) but the popup is drawn inside the page, so it can't leave the screen. */
+(function () {
+  'use strict';
+  var valDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  var uid = 0;
+
+  function enhance(sel) {
+    if (sel.dataset.dd) return;
+    sel.dataset.dd = '1';
+    var id = sel.id || 'dd' + (++uid);
+
+    var wrap = document.createElement('div');
+    wrap.className = 'dd';
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+    sel.classList.add('dd-native');
+    sel.tabIndex = -1;
+    sel.setAttribute('aria-hidden', 'true');
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dd-btn';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', id + '-list');
+    btn.innerHTML = '<span class="dd-label"></span><svg class="i" aria-hidden="true" focusable="false"><use href="#i-chev-d"/></svg>';
+
+    var list = document.createElement('ul');
+    list.className = 'dd-list';
+    list.id = id + '-list';
+    list.setAttribute('role', 'listbox');
+    list.hidden = true;
+
+    wrap.appendChild(btn);
+    wrap.appendChild(list);
+
+    var lbl = sel.id ? document.querySelector('label[for="' + sel.id + '"]') : null;
+    if (lbl) {
+      if (!lbl.id) lbl.id = id + '-lbl';
+      btn.setAttribute('aria-labelledby', lbl.id);
+      list.setAttribute('aria-labelledby', lbl.id);
+    }
+
+    var active = -1;
+    var lastW = window.innerWidth;
+    function items() { return Array.prototype.slice.call(list.querySelectorAll('.dd-opt')); }
+
+    function addOption(o) {
+      var li = document.createElement('li');
+      li.className = 'dd-opt';
+      li.id = id + '-o' + list.querySelectorAll('.dd-opt').length;
+      li.setAttribute('role', 'option');
+      li.dataset.value = o.value;
+      li.textContent = o.textContent;
+      list.appendChild(li);
+    }
+    function sync() {
+      var v = valDesc.get.call(sel);
+      var o = sel.options[sel.selectedIndex];
+      btn.firstChild.textContent = o ? o.textContent : '';
+      btn.classList.toggle('is-placeholder', !v);
+      items().forEach(function (li) {
+        var on = li.dataset.value === v;
+        li.setAttribute('aria-selected', String(on));
+        li.classList.toggle('is-selected', on);
+      });
+    }
+    function build() {
+      list.innerHTML = '';
+      Array.prototype.forEach.call(sel.children, function (ch) {
+        if (ch.tagName === 'OPTGROUP') {
+          var g = document.createElement('li');
+          g.className = 'dd-group';
+          g.setAttribute('role', 'presentation');
+          g.textContent = ch.label;
+          list.appendChild(g);
+          Array.prototype.forEach.call(ch.children, addOption);
+        } else if (ch.tagName === 'OPTION') {
+          addOption(ch);
+        }
+      });
+      sync();
+    }
+
+    function setActive(i, scroll) {
+      var its = items();
+      if (!its.length) return;
+      i = Math.max(0, Math.min(its.length - 1, i));
+      its.forEach(function (li) { li.classList.remove('is-active'); });
+      its[i].classList.add('is-active');
+      active = i;
+      btn.setAttribute('aria-activedescendant', its[i].id);
+      if (scroll) its[i].scrollIntoView({ block: 'nearest' });
+    }
+    function open() {
+      if (!list.hidden) return;
+      list.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      wrap.classList.remove('up');
+      var r = btn.getBoundingClientRect();
+      var below = window.innerHeight - r.bottom, above = r.top;
+      if (below < 260 && above > below) wrap.classList.add('up');
+      var cur = items().findIndex(function (li) { return li.classList.contains('is-selected'); });
+      setActive(cur < 0 ? 0 : cur, true);
+    }
+    function close() {
+      list.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.removeAttribute('aria-activedescendant');
+      active = -1;
+    }
+    function choose(li) {
+      valDesc.set.call(sel, li.dataset.value);
+      sync();
+      close();
+      btn.focus();
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function onDocClick(e) { if (!wrap.contains(e.target)) close(); }
+    function onResize() {
+      // ignore height-only resizes (mobile address bar / keyboard) so the list doesn't close unexpectedly
+      if (window.innerWidth !== lastW) { lastW = window.innerWidth; close(); }
+    }
+
+    btn.addEventListener('click', function () { if (list.hidden) open(); else close(); });
+    list.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    list.addEventListener('click', function (e) {
+      var li = e.target.closest('.dd-opt');
+      if (li) choose(li);
+    });
+    btn.addEventListener('keydown', function (e) {
+      var k = e.key;
+      if (k === 'ArrowDown' || k === 'ArrowUp') {
+        e.preventDefault();
+        if (list.hidden) open(); else setActive(active + (k === 'ArrowDown' ? 1 : -1), true);
+      } else if (k === 'Home' && !list.hidden) { e.preventDefault(); setActive(0, true); }
+      else if (k === 'End' && !list.hidden) { e.preventDefault(); setActive(items().length - 1, true); }
+      else if (k === 'Enter' || k === ' ') {
+        e.preventDefault();
+        if (list.hidden) open();
+        else if (active >= 0) choose(items()[active]);
+      } else if (k === 'Escape' && !list.hidden) { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (k === 'Tab') close();
+    });
+    document.addEventListener('click', onDocClick);
+    window.addEventListener('resize', onResize);
+
+    // clicking the <label> or calling focus() on the hidden select focuses the visible button
+    sel.addEventListener('focus', function () { btn.focus(); });
+
+    // keep the custom UI in sync when the page code changes the select (options rebuilt, .value set, form.reset)
+    Object.defineProperty(sel, 'value', {
+      configurable: true,
+      get: function () { return valDesc.get.call(sel); },
+      set: function (v) { valDesc.set.call(sel, v); sync(); }
+    });
+    new MutationObserver(build).observe(sel, { childList: true, subtree: true });
+    if (sel.form) sel.form.addEventListener('reset', function () { setTimeout(sync, 0); });
+
+    build();
+  }
+
+  document.querySelectorAll('select.select').forEach(enhance);
+})();
 </script>
 </body>
 </html>

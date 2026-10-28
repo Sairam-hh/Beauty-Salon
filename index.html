@@ -327,6 +327,47 @@ html.menu-open,html.menu-open body{overflow:hidden}
 .cta-banner .sparkle{position:absolute;color:var(--peach);opacity:.55;animation:floaty 6s ease-in-out infinite;z-index:-1}
 .cta-banner .sparkle.s1{top:18%;left:10%}.cta-banner .sparkle.s2{bottom:18%;right:12%;animation-delay:-2s}
 
+
+/* Footer contact hover effects */
+.footer-contact li {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Address and working hours */
+.footer-contact li span[data-setting="address"],
+.footer-contact li span[data-setting="hours"] {
+  display: inline-block;
+  cursor: default;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Hover effect for all contact text */
+.footer-contact li:hover span[data-setting="address"],
+.footer-contact li:hover span[data-setting="hours"] {
+  color: var(--accent, #75b843);
+  transform: translateX(5px);
+}
+
+/* Hover effect for phone and email */
+.footer-contact li a {
+  transition: color 0.3s ease;
+}
+
+.footer-contact li:hover a {
+  color: var(--accent, var(--rose));
+}
+
+/* Hover effect for contact icons */
+.footer-contact li svg {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.footer-contact li:hover svg {
+  color: var(--accent, var(--rose));
+  transform: scale(1.12);
+}
+
+
 </style>
 </head>
 <body class=" has-header">
