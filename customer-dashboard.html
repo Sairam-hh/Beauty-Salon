@@ -314,6 +314,7 @@ body.dash{background:#FBF3F0;overflow-x:hidden}
 .hero-welcome::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.13);z-index:-1}
 .hero-welcome h2{color:#fff;margin-bottom:6px}.hero-welcome p{margin:0 0 16px;color:rgba(255,255,255,.92)}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.form-grid > .field{min-width:0;max-width:100%}
 .cards-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .mini-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;transition:transform .4s var(--ease),box-shadow .4s;min-width:0}
 .mini-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
@@ -377,6 +378,28 @@ body.dash{background:#FBF3F0;overflow-x:hidden}
 .dd-opt{padding:10px 12px 10px 18px;border-radius:4px;cursor:pointer;line-height:1.4;font-size:.95rem;white-space:normal;overflow-wrap:anywhere}
 .dd-opt:hover,.dd-opt.is-active{background:var(--blush)}
 .dd-opt.is-selected{font-weight:700;color:var(--deep)}
+
+/* custom in-page calendar (replaces the native date popup, which can escape the mobile screen) */
+.dd-btn.is-date .i{transform:none!important}
+.cal{position:absolute;left:0;top:calc(100% + 6px);z-index:90;width:100%;min-width:260px;max-width:calc(100vw - 32px);padding:12px;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-lg)}
+.cal[hidden]{display:none}
+.dd.up .cal{top:auto;bottom:calc(100% + 6px)}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.cal-title{font-family:var(--serif);font-weight:700;font-size:1.2rem;color:var(--deep);text-align:center;flex:1}
+.cal-nav{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;border-radius:var(--r);cursor:pointer;color:var(--deep);padding:0}
+.cal-nav .i{width:18px;height:18px}
+.cal-nav:hover:not([disabled]){background:var(--blush)}
+.cal-nav[disabled]{opacity:.35;cursor:not-allowed}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}
+.cal-wd{font-size:.7rem;font-weight:700;color:var(--muted);padding:4px 0;text-transform:uppercase}
+.cal-day{aspect-ratio:1;min-height:34px;padding:0;border:1.5px solid transparent;background:none;border-radius:var(--r);cursor:pointer;font-size:.92rem;color:var(--char)}
+.cal-day:hover:not([disabled]){background:var(--blush)}
+.cal-day.is-today{border-color:var(--mauve);font-weight:700}
+.cal-day.is-selected{background:var(--rose);border-color:var(--rose);color:#fff;font-weight:700}
+.cal-day[disabled]{color:rgba(37,33,39,.28);cursor:not-allowed;background:none}
+.cal-foot{display:flex;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.cal-foot button{background:none;border:0;cursor:pointer;font-weight:600;color:var(--deep);padding:8px 10px;border-radius:var(--r)}
+.cal-foot button:hover{background:var(--blush)}
 
 </style>
 </head>
@@ -1184,6 +1207,163 @@ function ico(n) { return '<svg class="i" aria-hidden="true"><use href="#i-' + n 
   }
 
   document.querySelectorAll('select.select').forEach(enhance);
+})();
+</script>
+<script>
+/* Custom date picker: replaces the browser's native calendar popup (which can escape the mobile screen).
+   The real <input type="date"> stays in the form (hidden) so value, min, validation and form.reset keep working. */
+(function () {
+  'use strict';
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var WD = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parse(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function today() { var t = new Date(); t.setHours(0, 0, 0, 0); return t; }
+  function maxDate() { var t = today(); t.setFullYear(t.getFullYear() + 1); return t; }
+
+  function enhanceDate(native) {
+    if (native.dataset.dd) return;
+    native.dataset.dd = '1';
+    var calId = (native.id || 'date') + '-cal';
+    function minDate() { return parse(native.getAttribute('min')) || today(); }
+
+    var wrap = document.createElement('div');
+    wrap.className = 'dd';
+    native.parentNode.insertBefore(wrap, native);
+    wrap.appendChild(native);
+    native.classList.add('dd-native');
+    native.tabIndex = -1;
+    native.setAttribute('aria-hidden', 'true');
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dd-btn is-date';
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', calId);
+    btn.innerHTML = '<span class="dd-label"></span><svg class="i" aria-hidden="true" focusable="false"><use href="#i-calendar"/></svg>';
+
+    var panel = document.createElement('div');
+    panel.className = 'cal';
+    panel.id = calId;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Choose a date');
+    panel.hidden = true;
+    panel.innerHTML =
+      '<div class="cal-head"><button type="button" class="cal-nav" data-nav="-1" aria-label="Previous month"><svg class="i" aria-hidden="true"><use href="#i-chev-l"/></svg></button>' +
+      '<div class="cal-title" aria-live="polite"></div>' +
+      '<button type="button" class="cal-nav" data-nav="1" aria-label="Next month"><svg class="i" aria-hidden="true"><use href="#i-chev-r"/></svg></button></div>' +
+      '<div class="cal-grid" role="grid"></div>' +
+      '<div class="cal-foot"><button type="button" data-act="clear">Clear</button><button type="button" data-act="today">Today</button></div>';
+    wrap.appendChild(btn);
+    wrap.appendChild(panel);
+
+    var lbl = native.id ? document.querySelector('label[for="' + native.id + '"]') : null;
+    if (lbl) { if (!lbl.id) lbl.id = native.id + '-lbl'; btn.setAttribute('aria-labelledby', lbl.id); }
+
+    var title = panel.querySelector('.cal-title');
+    var grid = panel.querySelector('.cal-grid');
+    var prev = panel.querySelector('[data-nav="-1"]');
+    var next = panel.querySelector('[data-nav="1"]');
+    var vy, vm, lastW = window.innerWidth;
+
+    function sync() {
+      var d = parse(native.value);
+      btn.firstChild.textContent = d ? d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Select a date';
+      btn.classList.toggle('is-placeholder', !d);
+    }
+    function render() {
+      var min = minDate(), max = maxDate(), sel = native.value, t = iso(today());
+      var first = new Date(vy, vm, 1), start = first.getDay(), dim = new Date(vy, vm + 1, 0).getDate();
+      title.textContent = MONTHS[vm] + ' ' + vy;
+      prev.disabled = new Date(vy, vm, 0) < min;
+      next.disabled = new Date(vy, vm + 1, 1) > max;
+      var html = WD.map(function (w) { return '<span class="cal-wd" aria-hidden="true">' + w + '</span>'; }).join('');
+      for (var i = 0; i < 42; i++) {
+        var n = i - start + 1;
+        if (n < 1 || n > dim) { html += '<span></span>'; continue; }
+        var d = new Date(vy, vm, n), v = iso(d), off = d < min || d > max;
+        html += '<button type="button" class="cal-day' + (v === sel ? ' is-selected' : '') + (v === t ? ' is-today' : '') + '" data-v="' + v + '"' +
+          (off ? ' disabled' : '') + ' aria-label="' + d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + '"' +
+          (v === sel ? ' aria-pressed="true"' : '') + '>' + n + '</button>';
+      }
+      grid.innerHTML = html;
+    }
+    function open() {
+      if (!panel.hidden) return;
+      var d = parse(native.value) || minDate();
+      vy = d.getFullYear(); vm = d.getMonth();
+      render();
+      panel.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      wrap.classList.remove('up');
+      var r = btn.getBoundingClientRect();
+      var below = window.innerHeight - r.bottom, above = r.top;
+      if (below < 370 && above > below) wrap.classList.add('up');
+      var f = grid.querySelector('.is-selected:not([disabled])') || grid.querySelector('.cal-day:not([disabled])');
+      if (f) f.focus({ preventScroll: true });
+    }
+    function close() {
+      if (panel.hidden) return;
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    function setValue(v) {
+      native.value = v;
+      sync();
+      close();
+      btn.focus();
+      native.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function shift(dir) {
+      vm += dir;
+      if (vm < 0) { vm = 11; vy--; } else if (vm > 11) { vm = 0; vy++; }
+      render();
+    }
+
+    btn.addEventListener('click', function () { if (panel.hidden) open(); else close(); });
+    panel.addEventListener('click', function (e) {
+      var day = e.target.closest('.cal-day');
+      if (day && !day.disabled) { setValue(day.getAttribute('data-v')); return; }
+      var nav = e.target.closest('[data-nav]');
+      if (nav && !nav.disabled) { shift(+nav.getAttribute('data-nav')); return; }
+      var act = e.target.closest('[data-act]');
+      if (!act) return;
+      if (act.getAttribute('data-act') === 'clear') { setValue(''); return; }
+      var t = today();
+      if (t >= minDate() && t <= maxDate()) setValue(iso(t));
+    });
+    panel.addEventListener('keydown', function (e) {
+      var k = e.key;
+      if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); btn.focus(); return; }
+      var cur = e.target.closest && e.target.closest('.cal-day');
+      if (!cur) return;
+      var days = Array.prototype.slice.call(grid.querySelectorAll('.cal-day'));
+      var i = days.indexOf(cur), step = k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : k === 'ArrowUp' ? -7 : k === 'ArrowDown' ? 7 : 0;
+      if (!step) return;
+      e.preventDefault();
+      var tgt = days[i + step];
+      if (tgt && !tgt.disabled) tgt.focus();
+    });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !panel.hidden) { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (e.key === 'ArrowDown' && panel.hidden) { e.preventDefault(); open(); }
+    });
+    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
+    window.addEventListener('resize', function () { if (window.innerWidth !== lastW) { lastW = window.innerWidth; close(); } });
+
+    // label click / focus() on the hidden input (e.g. validation errors) focuses the visible button
+    native.addEventListener('focus', function () { btn.focus(); });
+    if (native.form) native.form.addEventListener('reset', function () { setTimeout(sync, 0); });
+    native.addEventListener('change', sync);
+    sync();
+  }
+
+  document.querySelectorAll('input[type="date"].input').forEach(enhanceDate);
 })();
 </script>
 </body>
